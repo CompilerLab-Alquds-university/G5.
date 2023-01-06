@@ -1,82 +1,135 @@
-//First, define data structures for the AST nodes and symbol table entries
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// AST node types
-enum {
-  AST_VAR_DECL,
-  AST_FUN_DECL,
-  AST_BLOCK,
-  AST_ASSIGN,
-  AST_IF,
-  AST_WHILE,
-  AST_RETURN,
-  AST_BIN_OP,
-  AST_UN_OP,
-  AST_FUN_CALL,
-  AST_VAR,
-  AST_NUMBER,
-};
+// Enumeration for symbol types
+typedef enum {
+  VARIABLE,
+  FUNCTION,
+  // Add additional types as needed
+} SymbolType;
 
-// AST node
-struct AstNode {
-  int type;
-  struct AstNode *left;
-  struct AstNode *right;
-  union {
-    char *string;
-    int number;
-  } value;
-};
-
-// Symbol types
-enum {
-  SYMBOL_VAR,
-  SYMBOL_FUN,
-};
-
-// Symbol table entry
-struct Symbol {
-  int type;
+// Structure for symbol table entries
+typedef struct {
   char *name;
-  union {
-    int var_type;
-    struct {
-      int return_type;
-      int num_params;
-      int *param_types;
-    } fun;
-  } info;
-  struct Symbol *next;
-};
+  SymbolType type;
+  // Add additional fields as needed
+} SymbolTableEntry;
 
-// Symbol table
-struct SymbolTable {
-  struct Symbol *head;
-};
+// Structure for the symbol table
+typedef struct {
+  SymbolTableEntry *entries;
+  int size;
+  int capacity;
+} SymbolTable;
 
-
-
-//Next, write functions to create the AST and symbol table:
-
-
-
-// Create a new AST node
-struct AstNode *new_ast_node(int type, struct AstNode *left, struct AstNode *right) {
-  struct AstNode *node = malloc(sizeof(struct AstNode));
-  node->type = type;
-  node->left = left;
-  node->right = right;
-  return node;
+// Initialize a symbol table with a given capacity
+void init_symbol_table(SymbolTable *table, int capacity) {
+  table->entries = malloc(capacity * sizeof(SymbolTableEntry));
+  table->size = 0;
+  table->capacity = capacity;
 }
 
-// Create a new symbol table
-struct SymbolTable *new_symbol_table() {
-  struct SymbolTable *table = malloc(sizeof(struct SymbolTable));
-  table->head = NULL;
-  return table;
+// Free the memory used by a symbol table
+void free_symbol_table(SymbolTable *table) {
+  for (int i = 0; i < table->size; i++) {
+    free(table->entries[i].name);
+  }
+  free(table->entries);
+  table->size = 0;
+  table->capacity = 0;
 }
 
-// Add a symbol to the symbol table
-void add_symbol(struct SymbolTable *table, int type, char *name, void *info) {
-  struct Symbol *symbol = malloc(sizeof(struct Symbol));
-  symbol->type = type;
-  symbol->name = name;
+// Add a symbol to a symbol table
+void add_symbol(SymbolTable *table, SymbolType type, char *name) {
+  // Check if the symbol table is full
+  if (table->size == table->capacity) {
+    // Increase the capacity of the symbol table
+    table->capacity *= 2;
+    table->entries = realloc(table->entries, table->capacity * sizeof(SymbolTableEntry));
+  }
+
+  // Add the symbol to the symbol table
+  table->entries[table->size].type = type;
+  table->entries[table->size].name = strdup(name);
+  // Add additional fields as needed
+  table->size++;
+}
+
+// Check if a symbol is declared in a symbol table
+int is_symbol_declared(SymbolTable *table, char *name) {
+  for (int i = 0; i < table->size; i++) {
+    if (strcmp(table->entries[i].name, name) == 0) {
+      return 1;
+    }
+  }
+  return
+void init_errors(int capacity) {
+errors = malloc(capacity * sizeof(Error));
+num_errors = 0;
+max_errors = capacity;
+}
+
+// Free the memory used by the error array
+void free_errors() {
+for (int i = 0; i < num_errors; i++) {
+free(errors[i].message);
+}
+free(errors);
+num_errors = 0;
+max_errors = 0;
+}
+
+// Add an error to the error array
+void add_error(ErrorType type, char *message) {
+// Check if the error array is full
+if (num_errors == max_errors) {
+// Increase the capacity of the error array
+max_errors *= 2;
+errors = realloc(errors, max_errors * sizeof(Error));
+}
+
+// Add the error to the error array
+errors[num_errors].type = type;
+errors[num_errors].message = strdup(message);
+num_errors++;
+}
+
+// Print the error messages
+void print_errors() {
+for (int i = 0; i < num_errors; i++) {
+printf("Error: %s\n", errors[i].message);
+}
+}
+
+// Recursive function for checking semantic errors in an AST
+void check_semantic_errors(ASTNode *node, SymbolTable *symbol_table) {
+// Check the type of the AST node
+switch (node->type) {
+case VARIABLE_DECLARATION:
+// Check if the variable is already declared in the current scope
+if (is_symbol_declared(symbol_table, node->identifier)) {
+add_error(UNDECLARED_VARIABLE, "Variable already declared");
+}
+// Add the variable to the symbol table
+add_symbol(symbol_table, VARIABLE, node->identifier);
+break;
+case FUNCTION_DECLARATION:
+// Check if the function is already declared in the current scope
+if (is_symbol_declared(symbol_table, node->identifier)) {
+add_error(UNDECLARED_FUNCTION, "Function already declared");
+}
+// Add the function to the symbol table
+add_symbol(symbol_table, FUNCTION, node->identifier);
+// Create a new symbol table for the function scope
+SymbolTable function_symbol_table;
+init_symbol_table(&function_symbol_table, 8);
+// Check the semantic errors in the function body
+check_semantic_errors(node->function_body, &function_symbol_table);
+// Free the memory used by the function symbol table
+free_symbol_table(&function_symbol_table);
+break;
+case VARIABLE_ASSIGNMENT:
+// Check if the variable is declared in the current scope
+if (!is_symbol_declared(symbol_table, node->identifier)) {
+add_error(UNDECLARED_VARIABLE, "Undeclared variable");

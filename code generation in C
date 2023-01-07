@@ -1,44 +1,94 @@
-//First, define a data structure to represent the machine code instructions that you will generate:
-// Machine code instruction types
-enum {
-  INSTR_MOV,
-  INSTR_ADD,
-  INSTR_SUB,
-  INSTR_MUL,
-  INSTR_DIV,
-  INSTR_CMP,
-  INSTR_JE,
-  INSTR_JNE,
-  INSTR_JG,
-  INSTR_JGE,
-  INSTR_JL,
-  INSTR_JLE,
-  INSTR_PUSH,
-  INSTR_POP,
-  INSTR_CALL,
-  INSTR_RET,
-};
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Machine code instruction
-struct Instruction {
-  int type;
-  int src;
-  int dest;
-};
+// Enumeration for AST node types
+typedef enum {
+  AST_INT,
+  AST_FLOAT,
+  AST_PLUS,
+  AST_MINUS,
+  AST_MULTIPLY,
+  AST_DIVIDE,
+  // Add additional types as needed
+} ASTNodeType;
 
-// Machine code
-struct MachineCode {
-  int num_instructions;
-  struct Instruction *instructions;
-};
+// Structure for AST nodes
+typedef struct {
+  ASTNodeType type;
+  union {
+    int int_value;
+    float float_value;
+    struct {
+      struct ASTNode *left;
+      struct ASTNode *right;
+    } binary_operator;
+  };
+} ASTNode;
+
+// Structure for intermediate code instructions
+typedef struct {
+  char *op;
+  char *arg1;
+  char *arg2;
+  char *result;
+} Instruction;
+
+// Array for storing intermediate code instructions
+Instruction *instructions;
+int num_instructions;
+int max_instructions;
+
+// Temporary variable counter for generating unique variables
+int temp_var_counter;
+
+// Generate a new temporary variable
+char *new_temp_var() {
+  char *temp_var = malloc(32 * sizeof(char));
+  snprintf(temp_var, 32, "temp%d", temp_var_counter);
+  temp_var_counter++;
+  return temp_var;
+}
+
+// Add an instruction to the intermediate code array
+void add_instruction(char *op, char *arg1, char *arg2, char *result) {
+  // Check if the instruction array is full
+  if (num_instructions == max_instructions) {
+    // Increase the capacity of the instruction array
+    max_instructions *= 2;
+    instructions = realloc(instructions, max_instructions * sizeof(Instruction));
+  }
+
+  // Add the instruction to the instruction array
+  instructions[num_instructions].op = strdup(op);
+  instructions[num_instructions].arg1 = strdup(arg1);
+  instructions[num_instructions].arg2 = strdup(arg2);
+  instructions[num_instructions].result = strdup(result
 
 
 
-
-
-//Next, write functions to generate machine code instructions and translate them into assembly code:
-
-// Generate machine code instructions for an AST node
-void generate_instructions(struct AstNode *node, struct MachineCode *code) {
+void generate_intermediate_code(ASTNode *node) {
+  // Generate intermediate code for the left and right operands
+  generate_intermediate_code(node->left);
+  generate_intermediate_code(node->right);
+  // Generate intermediate code for the operation
   switch (node->type) {
-    case AST_NUMBER:
+    case BINARY_PLUS:
+      printf("ADD %s, %s\n", node->left->result, node->right->result);
+      break;
+    case BINARY_MINUS:
+      printf("SUB %s, %s\n", node->left->result, node->right->result);
+      break;
+    case BINARY_MULTIPLY:
+      printf("MUL %s, %s\n", node->left->result, node->right->result);
+      break;
+    case BINARY_DIVIDE:
+      printf("DIV %s, %s\n", node->left->result, node->right->result);
+      break;
+    // Add additional cases as needed
+  }
+  // Update the result field of the node
+  sprintf(node->result, "t%d", temp_count++);
+  // Update the type field of the node
+  node->data_type = INT;
+}
